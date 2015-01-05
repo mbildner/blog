@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Promise.js - Promises in JavaScript</title>
+</head>
+<body>
+
+  <h1>Promise.js</h1>
+  <h1><a href="https://github.com/mbildner/promise.js">[on github]</a></h1>
+
+  <h2>Promises in JavaScript</h2>
+
+  <h3>Wat are Promises?</h3>
+  <p>
+    <em>TL;DR Promises are a functional abstraction to manage asynchronous control flow. BOOM.</em>
+
+    Promises are a really cool technique for managing async stuff in your code. The technique gives you a `promise` object that has a method for adding callbacks to be called after some asynchronous code runs. These promises can be chained together, meaning that we can finally flatten out our dreaded <a href="https://www.google.com/search?q=callback+hell+javascript">nested callbacks<a> into a clean, understandable chain of calls. Promises help turn this:
+
+    <pre>
+      getUserId(function (userId) {
+        getUserInfo(userId, function (userInfoObj) {
+          saveUserInfo(userInfoObj, function (saveWorked) {
+            if (saveWorked) {
+              alert('congratulations, your data is saved on the server');
+            }
+            else {
+              alert('oh no! your data got all gatted');
+            }
+          });
+        });
+      });
+    </pre>
+    into this:
+    <pre>
+      getUserId()
+        .then(getUserInfo)
+        .then(saveUserInfo)
+        .then(function (saveWorked) {
+          if (saveWorked) {
+            alert('congratulations, your data is saved on the server');
+          }
+          else {
+            alert('oh no! your data got all gatted');
+          }
+        })
+    </pre>
+
+
+
+  </p>
+  <h3>
+    Why do I care?
+  </h3>
+  <p>
+    You care because dealing with async stuff is really really hard, and any tool that makes your code easier to write and - much more importantly - <em>easier to read</em> will make you a better programmer.
+  </p>
+
+
+
+
+
+</body>
+</html>
