@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/mbildner/blog/issues"
   },
-  "homepage": "https://github.com/mbildner/blog"
+  "homepage": "https://github.com/mbildner/blog",
+  "dependencies": {
+    "gulp": "^3.8.11",
+    "gulp-markdown": "^1.0.0"
+  }
 }
