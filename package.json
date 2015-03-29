@@ -18,6 +18,7 @@
   "homepage": "https://github.com/mbildner/blog",
   "dependencies": {
     "gulp": "^3.8.11",
-    "gulp-markdown": "^1.0.0"
+    "gulp-markdown": "^1.0.0",
+    "gulp-wrap": "^0.11.0"
   }
 }
