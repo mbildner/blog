@@ -1,0 +1,62 @@
+<title>FIxing Google&#39;s Broken Tabs</title>
+
+<h1 id="fixing-google-s-broken-tabs">Fixing Google&#39;s Broken Tabs</h1>
+<h1 id="-on-github-https-gist-github-com-mbildner-c30fdc6b61d2a2cb19ae-"><a href="https://gist.github.com/mbildner/c30fdc6b61d2a2cb19ae">on github</a></h1>
+<p>If you, like me, prefer to use your keyboard for everything computer-related, then Google&#39;s search page tab-ordering probably makes you crazy.</p>
+<p>There was a time, way back when, when after you searched for something on Google, you could hit tab a few times, get to the result you wanted to see, hit enter, and be taken straight to that page. Great workflow: <strong>A+</strong> to Google&#39;s UX people.
+Fast forward to 2015, and Google&#39;s basic search screen is full of all kinds of bells and whistles between the search bar and the results panel. Now when I tab, I have to swim through this thicket of links and buttons before I can get to my results. Terrible workflow: <strong>F</strong> for the UX here.</p>
+<p>In other words, the markup went from something like this:</p>
+<pre><code class="lang-HTML">&lt;input id=&quot;google-search-box&quot;/&gt;
+&lt;a href=&quot;firstresult.com&quot;&gt;One&lt;/a&gt;
+&lt;a href=&quot;secondresult.com&quot;&gt;Two&lt;/a&gt;
+&lt;a href=&quot;thirdresult.com&quot;&gt;Three&lt;/a&gt;
+&lt;a href=&quot;fourthresult.com&quot;&gt;Four&lt;/a&gt;
+&lt;a href=&quot;fifthresult.com&quot;&gt;Five&lt;/a&gt;
+</code></pre>
+<p>To something like this:</p>
+<pre><code class="lang-HTML">&lt;input id=&quot;google-search-box&quot;/&gt;
+&lt;a href=&quot;some google link&quot;&gt;Stay in google!&lt;/a&gt;
+&lt;a href=&quot;some other google link&quot;&gt;NEVER lEAVE US&lt;/a&gt;
+&lt;a href=&quot;google promotional page&quot;&gt;this link might not be here tomorrow lol&lt;/a&gt;
+&lt;a href=&quot;srsly stahp&quot;&gt;why is this happening to me? there is no joy left in the world&lt;/a&gt;
+&lt;a href=&quot;firstresult.com&quot;&gt;One&lt;/a&gt;
+&lt;a href=&quot;secondresult.com&quot;&gt;Two&lt;/a&gt;
+&lt;a href=&quot;thirdresult.com&quot;&gt;Three&lt;/a&gt;
+&lt;a href=&quot;fourthresult.com&quot;&gt;Four&lt;/a&gt;
+&lt;a href=&quot;fifthresult.com&quot;&gt;Five&lt;/a&gt;
+</code></pre>
+<h2 id="life-doesn-t-have-to-be-this-hard-">Life doesn&#39;t have to be this hard.</h2>
+<p>Looking at the page, it&#39;s &quot;obvious&quot; how the tabbing behavior got broken:</p>
+<ul>
+<li>tabs move focus on the page</li>
+<li>tabbing moves vertically, from top to bottom</li>
+<li>there&#39;s more stuff between the top (search bar) and the bottom (your results)</li>
+<li>tabbing has to move through all that stuff before getting to your results</li>
+</ul>
+<p>That&#39;s of course &quot;obvious&quot;, but as some readers will know it&#39;s not strictly speaking correct.</p>
+<h2 id="tabindex-ftw">tabindex ftw</h2>
+<p>The order in which you tab through items on a page <em>does</em> default to the behavior described above, but it can easily be <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/tabIndex">overridden</a>, by giving html elements their own custom <code>tabindex</code> property. Waaaaat?</p>
+<p>Theoretically, a site&#39;s whole tabbing order could be managed this way. In most cases though, it makes sense to set <code>tabindex</code> for special elements in a workflow, eg the first field you want users to focus on, or maybe to walk users through a set of inputs with a non-obvious flow. Luckily, <code>tabindex</code> is not an all-or-nothing proposal. If you give some elements indices and not others, your browser will move through the defined sequence <strong>first</strong> and then move through the rest of the page in &quot;obvious&quot; default order described above (top to bottom).</p>
+<p>The improved markup would look something like this (indices start at 1 here):</p>
+<pre><code class="lang-HTML">&lt;input id=&quot;google-search-box&quot;/&gt;
+&lt;a href=&quot;some google link&quot;&gt;Stay in google!&lt;/a&gt;
+&lt;a href=&quot;some other google link&quot;&gt;NEVER lEAVE US&lt;/a&gt;
+&lt;a href=&quot;google promotional page&quot;&gt;this link might not be here tomorrow lol&lt;/a&gt;
+&lt;a href=&quot;srsly stahp&quot;&gt;why is this happening to me? there is no joy left in the world&lt;/a&gt;
+&lt;a href=&quot;firstresult.com&quot; tabindex=&quot;1&quot;&gt;One&lt;/a&gt;
+&lt;a href=&quot;secondresult.com&quot; tabindex=&quot;2&quot;&gt;Two&lt;/a&gt;
+&lt;a href=&quot;thirdresult.com&quot; tabindex=&quot;3&quot;&gt;Three&lt;/a&gt;
+&lt;a href=&quot;fourthresult.com&quot; tabindex=&quot;4&quot;&gt;Four&lt;/a&gt;
+&lt;a href=&quot;fifthresult.com&quot; tabindex=&quot;5&quot;&gt;Five&lt;/a&gt;
+</code></pre>
+<h2 id="how-did-it-get-broken-">How did it get broken?</h2>
+<p>For what it&#39;s worth, I don&#39;t <em>necessarily</em> think this is the best way to fix the page. My bet is that it&#39;s better to lay out the page in a way that makes the obvious user behavior work by default. In other words, it&#39;s probably better to move most of the special Google&#39;y links to somewhere other than <strong>right between</strong> the search bar and the search results.</p>
+<p>Presumably Google&#39;s UX people understand that, and have chosen to interfere with the natural workflow anyway. My guess is that they are working on a mandate to try to keep traffic inside the Google ecosystem, and letting users fall-through to search results if they don&#39;t find what they&#39;re looking for there. I can&#39;t really say that I blame them if this is in fact what&#39;s happening. Product designers are supposed to make their users&#39; lives easier, but they&#39;re also supposed to build and improve their companies, and changing the search page UX (still Google&#39;s star product) to try to capture more user-time makes a ton of sense as a way to do that.</p>
+<p>Still, it&#39;s super annoying.</p>
+<h2 id="fix-it-">Fix it!</h2>
+<p>Unless Google decides to fix the workflow, the simplest fix is to set the tabbing order manually. I&#39;ve written a little snippet to do that <a href="https://gist.github.com/mbildner/c30fdc6b61d2a2cb19ae">here</a>. This is how it looks run through the Google Closure compiler (the irony is not lost on me):</p>
+<pre><code class="lang-JavaScript">
+(function(c){function d(a,b){a.setAttribute(&quot;tabindex&quot;,b.toString());return b}var e=[].slice.call(c.querySelectorAll(&quot;#rso h3 a&quot;)),f=e.length;[].slice.call(c.querySelectorAll(&quot;[tabindex]&quot;)).forEach(function(a){var b=+a.getAttribute(&quot;tabindex&quot;)+f;d(a,b)});e.forEach(function(a,b){d(a,b+1)})})(document);
+</code></pre>
+<p>This will not per-se fix the problem, since the old tabbing order will come right back the next time the page&#39;s content refreshes (which may happen before reload, I don&#39;t know how google&#39;s homepage search results work).</p>
+<p>A longer term client-side fix would be putting this into a browser extension, so that the code gets run (and the page gets fixed) every tine you hit the results page. Definitely something I&#39;d consider for another Sunday morning.</p>

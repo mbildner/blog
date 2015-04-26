@@ -1,125 +1,80 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Promise.js - Promises in JavaScript</title>
-</head>
-<body>
+<title>Promise.js - Promises in JavaScript</title>
 
-  <h1>Promise.js</h1>
-  <h1><a href="https://github.com/mbildner/promise.js">[on github]</a></h1>
-
-  <h2>Promises in JavaScript</h2>
-
-  <h3>Wat are Promises?</h3>
-  <p>
-    <em>TL;DR Promises are a functional abstraction to manage asynchronous control flow. BOOM.</em>
-
-    Promises are a really cool technique for managing async stuff in your code. The technique gives you a `promise` object that has a method for adding callbacks to be called after some asynchronous code runs. These promises can be chained together, meaning that we can finally flatten out our dreaded <a href="https://www.google.com/search?q=callback+hell+javascript">nested callbacks<a> into a clean, understandable chain of calls. Promises help turn this:
-
-    <pre>
-      getUserId(function (err, userId) {
-        if (err) {
-          alert('problem making your async call');
-        }
-        else {
-          getUserInfo(userId, function (err, userInfoObj) {
-            if (err) {
-              alert('problem making your async call');
-            }
-            else {
-              saveUserInfo(userInfoObj, function (err, saveWorked) {
-                if (err) {
-                  alert('problem making your async call');
-                }
-                else if (!err && saveWorked) {
-                  alert('congratulations, your data is saved on the server');
-                }
-                else if (!err && !saveWorked) {
-                  alert('oh no! your data got all gatted');
-                }
-              });
-            }
-          });
-        }
-      });
-    </pre>
-    into this:
-    <pre>
-      getUserId()
-        .then(getUserInfo)
-        .then(saveUserInfo)
-        .then(function (saveWorked) {
-          if (saveWorked) {
-            alert('congratulations, your data is saved on the server');
+<h1 id="promise-js">Promise.js</h1>
+<h1 id="-on-github-https-github-com-mbildner-promise-js-"><a href="https://github.com/mbildner/promise.js">[on github]</a></h1>
+<h2 id="promises-in-javascript">Promises in JavaScript</h2>
+<h3 id="wat-are-promises-">Wat are Promises?</h3>
+<p><em>TL;DR Promises are a functional abstraction to manage asynchronous control flow. BOOM.</em></p>
+<p>Promises are a really cool technique for managing async stuff in your code. The technique gives you a <code>promise</code> object that has a method for adding callbacks to be called after some asynchronous code runs. These promises can be chained together, meaning that we can finally flatten out our dreaded <a href="https://www.google.com/search?q=callback+hell+javascript">nested callbacks</a> into a clean, understandable chain of calls. Promises help turn this:</p>
+<pre><code class="lang-JavaScript">getUserId(function (err, userId) {
+  if (err) {
+    alert(&#39;problem making your async call&#39;);
+  }
+  else {
+    getUserInfo(userId, function (err, userInfoObj) {
+      if (err) {
+        alert(&#39;problem making your async call&#39;);
+      }
+      else {
+        saveUserInfo(userInfoObj, function (err, saveWorked) {
+          if (err) {
+            alert(&#39;problem making your async call&#39;);
           }
-          else {
-            alert('oh no! your data got all gatted');
+          else if (!err &amp;&amp; saveWorked) {
+            alert(&#39;congratulations, your data is saved on the server&#39;);
           }
-        })
-        .catch(function (error) {
-          alert('problem making your async call');
+          else if (!err &amp;&amp; !saveWorked) {
+            alert(&#39;oh no! your data got all gatted&#39;);
+          }
         });
-    </pre>
-    In fairness to the rat's nest of callbacks above, nested callbacks don't *have* to be that bad. There are absolutely <a href="http://andrewkelley.me/post/js-callback-organization.html">ways of improving</a> the readability and organization of that code using better practices and vanilla js (ie no 3rd party frameworks). But something like this seems to be the reflex of a lot of people writing JavaScript, and honestly it makes sense - JS has amazing support for in-line functions, and thinking asynchronously is hard. Given those two facts it makes a lot of sense that people sort of muddle their way through async tasks like this by nesting a bunch of anonymous functions and maybe adding some comments.
-
-    (Also to be fair, the promises example could be made almost equally rats-nesty if you try hard enough. I'll show you how later!)
-
-    Luckily, there is a better way!
-  </p>
-  <h3>
-    Why do YOU care?
-  </h3>
-  <p>
-    You care because dealing with async stuff is really really hard, and any tool that makes your code easier to write and - much more importantly - <em>easier to read</em> will make you a better programmer.
-
-    Promises are a great abstraction that encourage much more linear code. They do this by inverting the typical pattern for handling callbacks.
-
-    With any (single threaded event-looped) asynchronous code, the basic model you'll use is to give your code instructions to do something that would otherwise force it to wait, as well as instructions for what to do when that waiting time is over. Doing that for one activitiy really isn't bad, but when you want need to make the same kind of tasks with the information you get back from that call things start getting messy.
-
-    The problem is that you have to give your program instructions for what to do when it's finished with some task as well as instructions for how to handle a failure BEFORE you are even finished describing the task itself. Visually, you are literally writing your callback code *inside* your async function. I can think of very few other examples where people write complicated functions as the arguments for other functions, and there's a great reason: it's a terrible pattern and you shouldn't do it and it makes me sad.
-  </p>
-
-  <h3>How do Promises Help</h3>
-  <p>
-    Promises help by permitting you to decouple your function call and your callback provisions. Promise based async code produces asynchronous calls that make some non-blocking call like normal, but provide their own pipeline for getting the resulting return values to your callback functions. It's worth thinking about what that comment means:
-
-      Promises work exactly the same as regular callbacks, all that changes is the pattern and order for providing callbacks.
-
-    That's really nifty! There are a bunch of really cool libraries out there that offer their own special dsl for writing async functionality that then compiles into JavaScript. But with promises, you get to write plain old JS the entire time. No special magic is taking place, only some very clever engineering.
-
-    When you use a promise library in JS, you write async functions that follow the following pattern:
-
-    <ol>
-      <li>
-        Take one predefined library function as the callback for your async call
-      </li>
-      <li>
-        Return one predefined library function that takes one function which will take whatever information is passed to the function from step one, and returns itself
-      </li>
-    </ol>
-
-    The trick to this pattern is that now you are making your function calls BEFORE you ever write a callback. Since you only ever have one function that gets used as your callback, you pass it in pro-forma into async calls, and write your callbacks where they belong: AFTER your function body.
-  </p>
-
-  <h3>Promises in the Wild</h3>
-  <p>
-    There are a few well-known promise libraries in common use right now. The best known is probably <a href="https://github.com/kriskowal/q">Q, by Kris Kowal</a>. It's the one I use for most of my node projects, and I really like it. There's also <a href="https://github.com/petkaantonov/bluebird">BlueBird, by Petka Antonov</a>. I have never used it, but I've read a lot of hype about it. For my browser work, I tend to work almost exclusively in AngularJS these days, which provides its own promise library (because Angular) - <a href="https://docs.angularjs.org/api/ng/service/$q">$q</a>. It has a relatively tiny feature set and a simple API, which actually made it a GREAT way to get introduced to promises! It can feel a touch limiting though compared to some of the more robust tools out there.
-  </p>
-  <h3>Promises as Spec</h3>
-  <p>
-    Promises are actually part of the ES6 specification, which means that they are going to be included natively in your browser soon (protip® they are already there in most modern browsers!). <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">MDN has a great write up explaining the spec</a>.
-  </p>
-  <h3>Why I Wrote my Own</h3>
-  <p>
-    I wrote my own Promise library partly because I like doing that, but specifically because promises felt like they did a lot of magic and were super hard for me to understand. Most cool libraries I use make synchronous work simpler - which is super important, but relatively easy to understand. Promises, by contrast, work in the domain of time. They feel like they're changing something much more fundamental than they are, the control flow of your program. Of course, they ARE NOT DOING THAT, but promises well-written can really transform how it feels to write asynchronous code in JavaScript. I wrote my own implementation sort of to convince myself that there's no magic involved, just some really cool tricks.
-  </p>
-  <h2>Thoughts for the Future</h2>
-  <p>
-    You should be using promises. If you don't want to use promises, then you should be using something like <a href="https://github.com/caolan/async">async</a> that provides some utility functions for dealing with tricky async code. But you should be using promises. Some part of me really would love to use a compile-to-js language with stronger native support for asyncronicity (eg <a href="http://maxtaco.github.io/coffee-script/">iced-coffeescript</a>), but overall I've decided that I'd rather stick with actual JS for most things. Barring better native support, promises are the best way you can get leverage for writing asynchronous code for the browser (or node). They provide a *very* simple interface for doing things out of order in time (because async...), and they do it with ZERO MAGIC.
-
-    Take a peek at my <a href="https://github.com/mbildner/promise.js">promise implementation</a>. This was a fast and dirty weekend approach - but I'm considering following Kris Kowal's <a href="https://github.com/kriskowal/uncommonjs/blob/master/promises/specification.md">spec</a> to build out a more robust version in the future.
-  </p>
-  <h1>But seriously, use Promises</h1>
-
-</body>
-</html>
+      }
+    });
+  }
+});
+</code></pre>
+<p>into this:</p>
+<pre><code class="lang-JavaScript">getUserId()
+  .then(getUserInfo)
+  .then(saveUserInfo)
+  .then(function (saveWorked) {
+    if (saveWorked) {
+      alert(&#39;congratulations, your data is saved on the server&#39;);
+    }
+    else {
+      alert(&#39;oh no! your data got all gatted&#39;);
+    }
+  })
+  .catch(function (error) {
+    alert(&#39;problem making your async call&#39;);
+  });
+</code></pre>
+<p>In fairness to the rat&#39;s nest of callbacks above, nested callbacks don&#39;t <em>have</em> to be that bad. There are absolutely <a href="http://andrewkelley.me/post/js-callback-organization.html">ways of improving</a> the readability and organization of that code using better practices and vanilla js (ie no 3rd party frameworks). But something like this seems to be the reflex of a lot of people writing JavaScript, and honestly it makes sense - JS has amazing support for in-line functions, and thinking asynchronously is hard. Given those two facts it makes a lot of sense that people sort of muddle their way through async tasks like this by nesting a bunch of anonymous functions and maybe adding some comments.</p>
+<p>(Also to be fair, the promises example could be made almost equally rats-nesty if you try hard enough. I&#39;ll show you how later!)</p>
+<p>Luckily, there is a better way!</p>
+<h3 id="why-do-you-care-">Why do YOU care?</h3>
+<p>You care because dealing with async stuff is really really hard, and any tool that makes your code easier to write and - much more importantly - <em>easier to read</em> will make you a better programmer.</p>
+<p>Promises are a great abstraction that encourage much more linear code. They do this by inverting the typical pattern for handling callbacks.</p>
+<p>With any (single threaded event-looped) asynchronous code, the basic model you&#39;ll use is to give your code instructions to do something that would otherwise force it to wait, as well as instructions for what to do when that waiting time is over. Doing that for one activitiy really isn&#39;t bad, but when you want need to make the same kind of tasks with the information you get back from that call things start getting messy.</p>
+<p>The problem is that you have to give your program instructions for what to do when it&#39;s finished with some task as well as instructions for how to handle a failure BEFORE you are even finished describing the task itself. Visually, you are literally writing your callback code <em>inside</em> your async function. I can think of very few other examples where people write complicated functions as the arguments for other functions, and there&#39;s a great reason: it&#39;s a terrible pattern and you shouldn&#39;t do it and it makes me sad.</p>
+<h3 id="how-do-promises-help">How do Promises Help</h3>
+<p>Promises help by permitting you to decouple your function call and your callback provisions. Promise based async code produces asynchronous calls that make some non-blocking call like normal, but provide their own pipeline for getting the resulting return values to your callback functions. It&#39;s worth thinking about what that comment means:</p>
+<blockquote>
+<p>Promises work exactly the same as regular callbacks, all that changes is the pattern and order for providing callbacks.</p>
+</blockquote>
+<p>That&#39;s really nifty! There are a bunch of really cool libraries out there that offer their own special dsl for writing async functionality that then compiles into JavaScript. But with promises, you get to write plain old JS the entire time. No special magic is taking place, only some very clever engineering.</p>
+<p>When you use a promise library in JS, you write async functions that follow the following pattern:</p>
+<ol>
+<li>Take one predefined library function as the callback for your async call</li>
+<li>Return one predefined library function that takes one function which will take whatever information is passed to the function from step one, and returns itself</li>
+</ol>
+<p>The trick to this pattern is that now you are making your function calls BEFORE you ever write a callback. Since you only ever have one function that gets used as your callback, you pass it in pro-forma into async calls, and write your callbacks where they belong: AFTER your function body.</p>
+<h3 id="promises-in-the-wild">Promises in the Wild</h3>
+<p>There are a few well-known promise libraries in common use right now. The best known is probably <a href="https://github.com/kriskowal/q">Q, by Kris Kowal</a>. It&#39;s the one I use for most of my node projects, and I really like it. There&#39;s also <a href="https://github.com/petkaantonov/bluebird">BlueBird, by Petka Antonov</a>. I have never used it, but I&#39;ve read a lot of hype about it. For my browser work, I tend to work almost exclusively in AngularJS these days, which provides its own promise library (because Angular) - <a href="https://docs.angularjs.org/api/ng/service/$q">$q</a>. It has a relatively tiny feature set and a simple API, which actually made it a GREAT way to get introduced to promises! It can feel a touch limiting though compared to some of the more robust tools out there.</p>
+<h3 id="promises-as-spec">Promises as Spec</h3>
+<p>Promises are actually part of the ES6 specification, which means that they are going to be included natively in your browser soon (protip® they are already there in most modern browsers!). <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">MDN has a great write up explaining the spec</a>.</p>
+<h3 id="why-i-wrote-my-own">Why I Wrote my Own</h3>
+<p>I wrote my own Promise library partly because I like doing that, but specifically because promises felt like they did a lot of magic and were super hard for me to understand. Most cool libraries I use make synchronous work simpler - which is super important, but relatively easy to understand. Promises, by contrast, work in the domain of time. They feel like they&#39;re changing something much more fundamental than they are, the control flow of your program. Of course, they ARE NOT DOING THAT, but promises well-written can really transform how it feels to write asynchronous code in JavaScript. I wrote my own implementation sort of to convince myself that there&#39;s no magic involved, just some really cool tricks.</p>
+<h2 id="thoughts-for-the-future">Thoughts for the Future</h2>
+<p>You should be using promises. If you don&#39;t want to use promises, then you should be using something like <a href="https://github.com/caolan/async">async</a> that provides some utility functions for dealing with tricky async code. But you should be using promises. Some part of me really would love to use a compile-to-js language with stronger native support for asyncronicity (eg <a href="http://maxtaco.github.io/coffee-script/">iced-coffeescript</a>), but overall I&#39;ve decided that I&#39;d rather stick with actual JS for most things. Barring better native support, promises are the best way you can get leverage for writing asynchronous code for the browser (or node). They provide a <em>very</em> simple interface for doing things out of order in time (because async...), and they do it with ZERO MAGIC.</p>
+<p>Take a peek at my <a href="https://github.com/mbildner/promise.js">promise implementation</a>. This was a fast and dirty weekend approach - but I&#39;m considering following Kris Kowal&#39;s <a href="https://github.com/kriskowal/uncommonjs/blob/master/promises/specification.md">spec</a> to build out a more robust version in the future.</p>
+<h1 id="but-seriously-use-promises">But seriously, use Promises</h1>

@@ -1,177 +1,114 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Interpolating Strings in JavaScript</title>
-</head>
-<body>
+<title>Interpolating Strings in JavaScript</title>
 
-	<h1>Thoughts on JavaScript string templating engines</h1>
-	<h3>JS templating engines are awesome.</h3>
+<h1 id="thoughts-on-javascript-string-templating-engines">Thoughts on JavaScript string templating engines</h1>
+<h3 id="js-templating-engines-are-awesome-">JS templating engines are awesome.</h3>
+<p>JavaScript templating engines have become incredibly important parts of the web development ecosystem. Conceptually, they are simple tools: templating engines typically take strings as inputs and replace parts of them with data from some provided data structure. Most languages come with some version of this tool built in to a native String class. JavaScript does not (althoug node exposes one in the util module).</p>
+<p>For the most part, the value of this kind of tool is obvious: string interpolation lets developers render computer-readable data structures (models) into human readable ui elements (view). Conceptually these tools are orthogonal to the MVC pattern, but it&#39;s easy to see how critical an interpolation engine is to a usable MVC system: if you are responsible for manually moving your models into your view, coding is going to suck:</p>
+<pre><code class="lang-JavaScript">
+var h1 = document.createElement(&#39;h1&#39;);
+var h1Str = &#39;Welcome to our site, &#39; + userData.name + &#39;!&#39;;
 
-	<p>
-		JavaScript templating engines have become incredibly important parts of the web development ecosystem. Conceptually, they are simple tools: templating engines typically take strings as inputs and replace parts of them with data from some provided data structure. Most languages come with some version of this tool built in to a native String class. JavaScript does not (althoug node exposes one in the util module).
-	</p>
+if (userData.age &lt; 21) {
+  h1Str += &#39;\nThanks for checking us out, unfortunately our whiskey website is for users ages 21+ only!&#39;;
+}
+else {
+  h1Str += &#39;\nLet\&#39;s get you some booze!&#39;;
+}
 
-	<p>
-		For the most part, the value of this kind of tool is obvious: string interpolation lets developers render computer-readable data structures (models) into human readable ui elements (view). Conceptually these tools are orthogonal to the MVC pattern, but it's easy to see how critical an interpolation engine is to a usable MVC system: if you are responsible for manually moving your models into your view, coding is going to suck:
+h1Str.textContent = h1Str;
+document.body.appendChild(h1);
+</code></pre>
+<p>This is the work necessary to render a single tag on the page. It&#39;s not the end of the world, but it scales terribly, is profoundly brittle, and makes your HTML useless to a developer or designer trying to figure out how the markup will eventually look. Which is why we use templating engines:</p>
+<pre><code class="lang-HTML">&lt;h1&gt;Welcome to our site, {{ userData.name }}!&lt;/h1&gt;
 
-		<pre>
-		var h1 = document.createElement('h1');
-		var h1Str = 'Welcome to our site, ' + userData.name + '!';
+&lt;p ng-if=&quot;userData.age&lt;21&quot;&gt;
+  Thanks for checking us out, unfortunately our whiskey website is for users ages 21+ only!
+&lt;/p&gt;
+&lt;p ng-if=&quot;userData.age&gt;21&quot;&gt;
+  Let&#39;s get you some booze!
+&lt;/p&gt;
+</code></pre>
+<p>This is pretty readable, and lets anyone reading the markup get at least a decent idea of how the final thing should look. Not bad.</p>
+<h2 id="how-they-work">How they work</h2>
+<p>Most templating engines tend to make use of the same basic API and implementation patterns:</p>
+<h3 id="api">API</h3>
+<ol>
+<li>Expose a compile function that takes a string and returns a function that takes a data structure</li>
+<li>Let the function returned from step 1 take a data structure and return a compiled string</li>
+</ol>
+<p>It&#39;s a super basic and highly readable pattern. <a href="http://underscorejs.org/#template">Underscore</a> uses, it, as does <a href="https://docs.angularjs.org/api/ng/service/$interpolate">Angular</a> (and others).  One common modification is to combine the two steps into one, where the user provides a string and data structure to one templating function, which returns a rendered string. <a href="https://github.com/janl/mustache.js">Mustache</a> works this way, for example, but this is just a shorthand for the same technique.</p>
+<h3 id="implementation">Implementation</h3>
+<p>Implementations also follow a basic pattern, but are differentiated in how they work under the hood.
+JS template engines tend to follow one basic pattern:</p>
+<ol>
+<li>Run the raw string against a regex to identify candidates for replacement</li>
+<li>Extract data from a context and replace candidates with their corresponding data</li>
+</ol>
+<p>The first half (regex searches) tend to be about the same everywhere. The second half however, has two wildly divergent implementations, one is good, one is not.</p>
+<p>One way that templating engines work is to write a JS parser in JavaScript, and to ship it with the templating engine. This is difficult, and relatively expensive, and kind of a pain in the ass to write. I&#39;ve been working sporadically on this kind of <a href="https://github.com/mbildner/parser.js">parsing engine</a> for a while now, with mixed results (expect a follow up post on that later).</p>
+<p>Conceptually though the idea is simple: write code that can read strings that mimic code, and figure out how to traverse a data structure to extract the data the user wants:</p>
+<pre><code class="lang-JavaScript">// assume for convenience that the user will only be accessing things with dots
+function parse (accessStr, contextObj) {
+  // get an array of the nested accessors we&#39;ll use
+  var accessKeys = accessStr.split(&#39;.&#39;);
 
-		if (userData.age < 21) {
-			h1Str += '\nThanks for checking us out, unfortunately our whiskey website is for users ages 21+ only!';
-		}
-		else {
-			h1Str += '\nLet\'s get you some booze!';
-		}
+  // iteratively read nested accessors
+  var value = accessKeys.reduce(function (scope, key) {
+    return scope[key];
+  }, contextObj);
 
-		h1Str.textContent = h1Str;
-		document.body.appendChild(h1);
-		</pre>
+  return value;
+}
 
-		This is the work necessary to render a single tag on the page. It's not the end of the world, but it scales terribly, is profoundly brittle, and makes your HTML useless to a developer or designer trying to figure out how the markup will eventually look. Which is why we use templating engines:
+var user = {
+  contact: {
+    addresses: {
+      home: {
+        city: &#39;Manhattan&#39;,
+        state: &#39;New York&#39;
+      }
+    }
+  }
+};
 
-		<pre>
-		&#60h1&#62Welcome to our site, {{ userData.name }}!&#60/h1&#62
+var scope = { user: user };
 
-		&#60p ng-if="userData.age<21"&#62
-			Thanks for checking us out, unfortunately our whiskey website is for users ages 21+ only!
-		&#60/p&#62
-		&#60p ng-if="userData.age>21"&#62
-			Let's get you some booze!
-		&#60/p&#62
-		</pre>
+var userCityStr = parse(&#39;user.contact.addresses.home.city&#39;, scope);
+console.log(userCityStr); // Manhattan
+</code></pre>
+<p>The other basic pattern is to make a call to the JS eval engine to directly interpret a string as JavaScript, typically by creating a function using the <code>new Function</code> format:</p>
+<pre><code class="lang-JavaScript">// can use dot and bracket accessors
+function parse (accessStr, contextObj) {
+  // the body of our template function
+  var funcStr = &#39;var value; with (contextObj) { value = &#39; + accessStr + &#39; }; return value;&#39;;
+  // this calls into the JS eval engine
+  var func = new Function(&#39;contextObj&#39;, funcStr);
+  var value = func(contextObj);
+  return value;
+}
 
-		This is pretty readable, and lets anyone reading the markup get at least a decent idea of how the final thing should look. Not bad.
-	</p>
+var user = {
+  contact: {
+    addresses: {
+      home: {
+        city: &#39;Manhattan&#39;,
+        state: &#39;New York&#39;
+      }
+    }
+  }
+};
 
-	<h2>How they work</h2>
-	Most templating engines tend to make use of the same basic API and implementation patterns:
+var scope = { user: user };
 
-	<h3>API</h3>
-	<p>
-		<ol>
-			<li>
-				Expose a compile function that takes a string and returns a function that takes a data structure
-			</li>
-			<li>
-				Let the function returned from step 1 take a data structure and return a compiled string
-			</li>
-		</ol>
-
-		It's a super basic and highly readable pattern. <a href="http://underscorejs.org/#template">Underscore</a> uses, it, as does <a href="https://docs.angularjs.org/api/ng/service/$interpolate">Angular</a> (and others).  One common modification is to combine the two steps into one, where the user provides a string and data structure to one templating function, which returns a rendered string. <a href="https://github.com/janl/mustache.js">Mustache</a> works this way, for example, but this is just a shorthand for the same technique.
-	</p>
-
-	<h3>Implementation</h3>
-	<p>
-		Implementations also follow a basic pattern, but are differentiated in how they work under the hood.
-		JS template engines tend to follow one basic pattern:
-
-		<ol>
-			<li>
-				Run the raw string against a regex to identify candidates for replacement
-			</li>
-			<li>
-				Extract data from a context and replace candidates with their corresponding data
-			</li>
-		</ol>
-
-		The first half (regex searches) tend to be about the same everywhere. The second half however, has two wildly divergent implementations, one is good, one is not.
-
-		One way that templating engines work is to write a JS parser in JavaScript, and to ship it with the templating engine. This is difficult, and relatively expensive, and kind of a pain in the ass to write. I've been working sporadically on this kind of <a href="https://github.com/mbildner/parser.js">parsing engine</a> for a while now, with mixed results (expect a follow up post on that later).
-
-		Conceptually though the idea is simple: write code that can read strings that mimic code, and figure out how to traverse a data structure to extract the data the user wants:
-
-		<pre>
-			// assume for convenience that the user will only be accessing things with dots
-			function parse (accessStr, contextObj) {
-				// get an array of the nested accessors we'll use
-				var accessKeys = accessStr.split('.');
-
-				// iteratively read nested accessors
-				var value = accessKeys.reduce(function (scope, key) {
-					return scope[key];
-				}, contextObj);
-
-				return value;
-			}
-
-			var user = {
-				contact: {
-					addresses: {
-						home: {
-							city: 'Manhattan',
-							state: 'New York'
-						}
-					}
-				}
-			};
-
-			var scope = { user: user };
-
-			var userCityStr = parse('user.contact.addresses.home.city', scope);
-			console.log(userCityStr); // Manhattan
-		</pre>
-
-		The other basic pattern is to make a call to the JS eval engine to directly interpret a string as JavaScript, typically by creating a function using the `new Function` format:
-
-		<pre>
-			// can use dot and bracket accessors
-			function parse (accessStr, contextObj) {
-				// the body of our template function
-				var funcStr = 'var value; with (contextObj) { value = ' + accessStr + ' }; return value;';
-				// this calls into the JS eval engine
-				var func = new Function('contextObj', funcStr);
-				var value = func(contextObj);
-				return value;
-			}
-
-			var user = {
-				contact: {
-					addresses: {
-						home: {
-							city: 'Manhattan',
-							state: 'New York'
-						}
-					}
-				}
-			};
-
-			var scope = { user: user };
-
-			var userCityStr = parse('user.contact.addresses.home.city', user);
-			console.log(userCityStr); // Manhattan
-
-		</pre>
-
-
-		<p>
-			This is actually a much cooler idea! It's taking JavaScript and using it to dynamically generate new code to be run at runtime. In other words, these templating engines are using macros, making their code <a href="http://en.wikipedia.org/wiki/Homoiconicity">homoiconic</a>. It's also highly dangerous and relatively inefficient.
-		</p>
-
-		<p>
-			You'll notice that the above code never makes a call to `eval`, so what am I talking about? The answer is that making use of the JS function constructor is an indirect way of using the interpreter. This makes intuitive sense: when you write out a function in your code, that code has to be read and interpreted before it produces a function in memory that can be used by your program. In order to generate a function with new behavior on the fly, you need to make that same call to the interpreter.
-		</p>
-
-		<p>
-			Anyone with some cultural knowledge of JavaScript has probably heard that <a href="http://archive.oreilly.com/pub/a/javascript/excerpts/javascript-good-parts/bad-parts.html">"Eval is evil"</a>. Like everything else, there's some disagreement about the topic, but I think there are good reasons to discourage direct accesses of the JS interpreter, as it tends to make your code less safe and slower. At this point it is also contrary to accepted idiomatic JS standards, which means your code will look less familiar to the community, and be less trusted for inclusion in third party applications.
-		</p>
-		<p>
-			Using `with` is another cool but <a href="http://www.yuiblog.com/blog/2006/04/11/with-statement-considered-harmful/">bad practice</a>: the `with` operator lets you reset JavaScript's typical function scoping, by setting as the scope for your code whatever variable it is provided. Messing with your scope like that makes code less reliable for humans to read, and slows down the JS engine, which now has to check multiple scope chains for any read inside that code. It's a bad thing, don't use it. But it sure is cool.
-		</p>
-	</p>
-
-	<h3>In the wild</h3>
-	<p>
-		Most responsible templating engines use the former technique to interpolate strings. Angular is the library that I'm most familiar with, and it has its own fairly complicated and highly optimized parser. <a href="https://github.com/angular/angular.js/blob/master/src/ng/parse.js#L956">It's really cool</a>.
-
-		Unfortunately, there are also libraries that make use of the eval technique. In particular, I know of a DEPRECATED tool, jQuery-tmpl <a href="https://github.com/BorisMoore/jquery-tmpl/blob/21d2a8f3b3ad5c2e09548558be8d3005352b70c4/jquery.tmpl.js#L317">that works this way</a>.
-	</p>
-
-	<h2>Conclusion: JS templating engines are so cool!</h2>
-	<p>
-		I've been working sporadically on a JS parser to build out a templating engine. It's a ton of fun, and has been a great learning experience. I highly recommend you try it. More importantly though, go find something cool that you use every day and try to make one yourself. I guarantee that even if you don't get a working model off the ground that it will enrich your understanding of the tool itself and the ecosystem in which it operates. GO HAVE FUN.
-	</p>
-</body>
-</html>
+var userCityStr = parse(&#39;user.contact.addresses.home.city&#39;, user);
+console.log(userCityStr); // Manhattan
+</code></pre>
+<p>This is actually a much cooler idea! It&#39;s taking JavaScript and using it to dynamically generate new code to be run at runtime. In other words, these templating engines are using macros, making their code <a href="http://en.wikipedia.org/wiki/Homoiconicity">homoiconic</a>. It&#39;s also highly dangerous and relatively inefficient.</p>
+<p>You&#39;ll notice that the above code never makes a call to <code>eval</code>, so what am I talking about? The answer is that making use of the JS function constructor is an indirect way of using the interpreter. This makes intuitive sense: when you write out a function in your code, that code has to be read and interpreted before it produces a function in memory that can be used by your program. In order to generate a function with new behavior on the fly, you need to make that same call to the interpreter.</p>
+<p>Anyone with some cultural knowledge of JavaScript has probably heard that <a href="http://archive.oreilly.com/pub/a/javascript/excerpts/javascript-good-parts/bad-parts.html">&quot;Eval is evil&quot;</a>. Like everything else, there&#39;s some disagreement about the topic, but I think there are good reasons to discourage direct accesses of the JS interpreter, as it tends to make your code less safe and slower. At this point it is also contrary to accepted idiomatic JS standards, which means your code will look less familiar to the community, and be less trusted for inclusion in third party applications.</p>
+<p>Using <code>with</code> is another cool but <a href="http://www.yuiblog.com/blog/2006/04/11/with-statement-considered-harmful/">bad practice</a>: the <code>with</code> operator lets you reset JavaScript&#39;s typical function scoping, by setting as the scope for your code whatever variable it is provided. Messing with your scope like that makes code less reliable for humans to read, and slows down the JS engine, which now has to check multiple scope chains for any read inside that code. It&#39;s a bad thing, don&#39;t use it. But it sure is cool.</p>
+<h3 id="in-the-wild">In the wild</h3>
+<p>Most responsible templating engines use the former technique to interpolate strings. Angular is the library that I&#39;m most familiar with, and it has its own fairly complicated and highly optimized parser. <a href="https://github.com/angular/angular.js/blob/master/src/ng/parse.js#L956">It&#39;s really cool</a>.</p>
+<p>Unfortunately, there are also libraries that make use of the eval technique. In particular, I know of a DEPRECATED tool, jQuery-tmpl <a href="https://github.com/BorisMoore/jquery-tmpl/blob/21d2a8f3b3ad5c2e09548558be8d3005352b70c4/jquery.tmpl.js#L317">that works this way</a>.</p>
+<h2 id="conclusion-js-templating-engines-are-so-cool-">Conclusion: JS templating engines are so cool!</h2>
+<p>I&#39;ve been working sporadically on a JS parser to build out a templating engine. It&#39;s a ton of fun, and has been a great learning experience. I highly recommend you try it. More importantly though, go find something cool that you use every day and try to make one yourself. I guarantee that even if you don&#39;t get a working model off the ground that it will enrich your understanding of the tool itself and the ecosystem in which it operates. GO HAVE FUN.</p>
