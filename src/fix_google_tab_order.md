@@ -51,7 +51,7 @@ That's of course "obvious", but as some readers will know it's not strictly spea
 
 The order in which you tab through items on a page _does_ default to the behavior described above, but it can easily be [overridden](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/tabIndex), by giving html elements their own custom `tabindex` property. Waaaaat?
 
-Theoretically, a site's whole tabbing order could be managed this way. In most cases though, it makes sense to set `tabindex` for special elements in a workflow, eg the first field you want users to focus on, or maybe to walk users through a set of inputs with a non-obvious inputs. Luckily, `tabindex` is not an all-or-nothing proposal. If you give some elements indices and not others, your browser will move through the defined sequence **first** and then move through the rest of the page in "obvious" default order described above (top to bottom).
+Theoretically, a site's whole tabbing order could be managed this way. In most cases though, it makes sense to set `tabindex` for special elements in a workflow, eg the first field you want users to focus on, or maybe to walk users through a set of inputs with a non-obvious flow. Luckily, `tabindex` is not an all-or-nothing proposal. If you give some elements indices and not others, your browser will move through the defined sequence **first** and then move through the rest of the page in "obvious" default order described above (top to bottom).
 
 The improved markup would look something like this (indices start at 1 here):
 
