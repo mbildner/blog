@@ -1,0 +1,218 @@
+<title>Function Declaration in JS</title>
+
+<h1 id="function-declaration-in-js">Function Declaration in JS</h1>
+<h2 id="how-do-i-function-">How do I function?</h2>
+<p>There are two commonly accepted ways of getting a function ready for use in JavaScript, which I&#39;ll call <code>declaration</code> and <code>assignment</code> syntaxes.</p>
+<p>This dichotomy isn&#39;t <em>exactly</em> correct, but it&#39;s close enough to be useful for now.</p>
+<h2 id="declaration-syntax">Declaration Syntax</h2>
+<p>JS permits the creation of functions using the familiar function declaration syntax:</p>
+<pre><code class="lang-JavaScript">
+function doThings(arg){
+  return &#39;omg hi guys&#39;;
+}
+</code></pre>
+<h2 id="assignment-syntax">Assignment Syntax</h2>
+<pre><code class="lang-JavaScript">
+var doThings = function(arg){
+  return &#39;omg hi guys&#39;;
+};
+</code></pre>
+<h2 id="what-s-the-difference-">What&#39;s the difference?</h2>
+<p>For most purposes, these two syntaxes do the same thing, they make a function callable by using the reference <code>doThings</code> from other code.</p>
+<p>So either way, we can do this:</p>
+<pre><code class="lang-JavaScript">
+var hiGuysString = doThings();
+
+console.log(hiGuysString); // &#39;omg hi guys&#39;
+</code></pre>
+<p>The major difference is that the declaration syntax permits the function to be used at a point in the code before it is written down.</p>
+<p>So you can do cool stuff like this:</p>
+<pre><code class="lang-JavaScript">
+var name = getName();
+
+console.log(name); // &#39;moshe bildner&#39;
+
+function getName() {
+  return &#39;moshe bildner&#39;;
+}
+</code></pre>
+<p>This trick <strong>does not</strong> work for assignment syntax, so this does not work:</p>
+<pre><code class="lang-JavaScript">
+var name = getName();
+
+/*
+
+LOL NOPE - you get an error:
+
+Uncaught ReferenceError: getName is not defined
+
+*/
+
+console.log(name); // &#39;moshe bildner&#39;
+
+var getName = function () {
+  return &#39;moshe bildner&#39;;
+}
+</code></pre>
+<p>Assignment syntax takes advantage of some fun scoping rules to let you write some surprisingly clean code.</p>
+<p>A lot of libraries insist on using assignment syntax, since it&#39;s a little more explicit.
+<em>(see <a href="http://underscorejs.org/docs/underscore.html">underscore</a> and <a href="http://underscorejs.org/docs/underscore.html">angular</a> for two giant examples)</em></p>
+<p>Fine.</p>
+<p>I still prefer Declaration syntax, since it permits you to move implementation code to below the actual interesting API, like this:</p>
+<pre><code class="lang-JavaScript">
+function Person(){
+  var wallet = new Wallet(100);
+  var bankAccount = new BankAccount(10000);
+
+  // API:
+  this.getPayment(amount){
+    var source = pickPaymentSource(amount);
+    return source.get(amount);
+  };
+
+  // Implementation:
+  function pickPaymentSource(amount){
+    if (wallet.hasAtLeast(amount)){
+      return wallet;
+    }
+    else if (bankAccount.hasAtLeast(amount)){
+      return bankAccount;
+    }
+
+    throw new Error(&#39;lol too broke sorry&#39;);
+  }
+
+}
+</code></pre>
+<p>As a consumer of the <code>Person</code> constructor (<em>please</em> don&#39;t say <code>class</code>) I should only know how to ask for a payment. It is up to the object to decide how (or whether) it will fulfill that payment.
+This is the classic example given to explain the <a href="https://en.wikipedia.org/wiki/Law_of_Demeter">Law of Demeter</a>, and it&#39;s a great illustration.</p>
+<p>Consider the alternative, if we use assignments:</p>
+<pre><code class="lang-JavaScript">
+function Person(){
+  var wallet = new Wallet(100);
+  var bankAccount = new BankAccount(10000);
+
+  // Implementation:
+  var pickPaymentSource = function(amount){
+    if (wallet.hasAtLeast(amount)){
+      return wallet;
+    }
+    else if (bankAccount.hasAtLeast(amount)){
+      return bankAccount;
+    }
+
+    throw new Error(&#39;lol too broke sorry&#39;);
+  }
+
+  // API:
+  this.getPayment(amount){
+    var source = pickPaymentSource(amount);
+    return source.get(amount);
+  };
+
+}
+</code></pre>
+<p>Now I have to read through a ton of boilerplate code that explains <em>how</em> this object works, instead of getting to skip to <em>what</em> it can do.</p>
+<p>This is suboptimal.</p>
+<h1 id="aha-but-surprises-">Aha, but surprises:</h1>
+<p>So far so good, Declarations are simpler and awesome. Yes they behave a little magically, but they are super useful and not hard to reason about.</p>
+<p>But there is one unintended consequence of this generally awesome flexibility, which is that function declarations mutate the environment record in a way that you cannot know without knowing that the function is being declared:</p>
+<pre><code class="lang-JavaScript">
+if (userIsLoggedOut){
+  myApi.blowAwayTheData();
+}
+
+
+function userIsLoggedOut(){
+  return false;
+}
+</code></pre>
+<p>HAHAHA FUCK YOU. Your user just lost their data for no good reason. Ruby handles this problem with more magic:</p>
+<pre><code class="lang-Ruby">
+if user_is_logged_out {
+  my_api.blow_away_the_data()
+}
+
+def user_is_logged_out()
+  return false
+end
+</code></pre>
+<p>This sytax is <strong>extremely</strong> similar, but in this case ruby treats all references to a method as an invocation of it, so your data is safe.</p>
+<p>JS is getting us into trouble here because of a combination of two tricks:</p>
+<ol>
+<li><p>Declaration hoisting:</p>
+<ul>
+<li>when I declare a function, it is available inside its parent&#39;s scope, not just beneath the place it is defined.</li>
+</ul>
+</li>
+<li><p>Everything is an object! --- sort of</p>
+<ul>
+<li>in JS, functions are objects, which means that we are conducting a boolean test on an object, which in JS (and most languages) evaluates to true</li>
+</ul>
+</li>
+</ol>
+<p>For anyone mad at JavaScript, note that Python does the same thing to functions:</p>
+<pre><code class="lang-Python">
+def user_is_logged_out():
+  return false
+
+if user_is_logged_out:
+  my_api.blow_away_the_data()
+</code></pre>
+<p>It&#39;s not 100% the same thing as the JS example, since you are forced to declare the function ahead of time, but Python has no problem with the easy-to-miss boolean test of a function that lets us shoot ourselves in the foot here.</p>
+<h1 id="declarations-are-statements-">Declarations are Statements:</h1>
+<p>The danger we&#39;re seeing here arises from the fact that function declarations are a case of JavaScript expressions, instead of JavaScript statements, as they might seem.
+Expressions are chunks of code that can be used anywhere your code expects a reference to a value, whereas statements guide execution of the program that operates on expressions.</p>
+<p>Wat?</p>
+<p>The classic demonstration of this difference is given using conditional branching:</p>
+<p>Statements make you build more verbose code with bigger detours in your branches:</p>
+<pre><code class="lang-JavaScript">
+function userIsLoggedOut(){
+  var tokenIsExpired = false;
+
+  if (myApi.checkToken()){
+    tokenIsExpired = true;
+  }
+
+  return tokenIsExpired;
+
+}
+</code></pre>
+<p>This code is pretty imperative, but gets the job done.</p>
+<p>Here that is as an expression:</p>
+<pre><code class="lang-JavaScript">
+function userIsLoggedOut(){
+  return !!myApi.checkToken();
+}
+</code></pre>
+<p>This is a goofy trivial case, but:</p>
+<ol>
+<li>I have <em>absolutely</em> seen the former syntax in production code.</li>
+<li>It is not always obvious to figure out how to get to the simple expression of your code</li>
+</ol>
+<p>Getting to expressions that can handle lots of abuse is a lot of what good functional abstractions provide. Haskell users love their <a href="https://hackage.haskell.org/package/base-4.8.1.0/docs/Data-Maybe.html">maybe</a>, and you can even get it in <a href="http://sean.voisen.org/blog/2013/10/intro-monads-maybe/">JavaScript</a>... but it&#39;s less popular (for a lot of reasons).</p>
+<p>Function declarations are expressions that can be used - in place - in your code, which is extremely powerful, and an <em>extremely</em> popular JavaScript pattern:</p>
+<pre><code class="lang-JavaScript">
+$.get(&#39;/some/remote/resource&#39;, function(response){
+  alert(&#39;here it is!&#39;, JSON.stringify(response));
+});
+</code></pre>
+<p>This only works because declaring a function makes that function immediately usable in the place it is declared. It is usable as a reference. Ruby uses blocks (and procs, and lambdas) to get the same effect, since methods have the reference-is-invocation behavior that we mentioned above.</p>
+<p>Python also has lambdas, but they suck. They&#39;re just awful.</p>
+<p>But the golden rule of an expression is that it should only provide a value, and not mutate state.</p>
+<pre><code class="lang-JavaScript">
+var userIsLoggedOut = false;
+
+// if you do this I will kill you
+var name = todayIsTuesday() ? (userIsLoggedOut = true) : &#39;moshe&#39;;
+</code></pre>
+<p>Again, this is an obviously contrived case, but I have seen examples of expressions mutating state in production.</p>
+<p><em>(NB: there are times and places where clever code is unavoidable, and in the bowels of some complicated library I&#39;m okay with it, but please document and test your weird shit.)</em></p>
+<p>The point is, when we use our Declaration syntax, we are actually using an expression that subtly mutates the state of our application.</p>
+<h1 id="conclusion-declarations-are-still-better">Conclusion: Declarations are still better</h1>
+<p>To my mind, it&#39;s still ok to use Declaration syntax, for one critical reason:</p>
+<p><strong>I believe it makes my code easier to read</strong></p>
+<p>As much as I hate surprise state changes, function declaration behavior is well enough documented that I should reasonably expect a competent developer to know how to read a file with &quot;private&quot; methods declared.</p>
+<p>More importantly, forcing developers - no matter how experienced they are - to slog through all of my implementation before getting to my API is a crappy deal, and I think burns more of their cognitive resources than risking a surprise variable being introduced.</p>
+<p>With that said, I think it&#39;s worth understanding what&#39;s going on in your environment, and really coming to grips with your language of choice.</p>
+<p>If you have an opinion on which syntax is better, I&#39;d love to hear it!</p>
