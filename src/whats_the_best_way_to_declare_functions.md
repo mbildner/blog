@@ -100,7 +100,7 @@ function Person(){
   var bankAccount = new BankAccount(10000);
 
   // API:
-  this.getPayment(amount){
+  this.getPayment = function(amount){
     var source = pickPaymentSource(amount);
     return source.get(amount);
   };
